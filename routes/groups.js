@@ -1,6 +1,7 @@
 // routes/groups.js
 const { nanoid } = require('nanoid');
 const db = getDb();
+const lineAuth = require('../lib/line-auth');
 
 function getDb() {
   // Use sandbox driver only when explicitly testing locally without
@@ -20,6 +21,28 @@ module.exports = function (router) {
   // --- Landing page ---
   router.get('/', (req, res) => {
     res.render('landing');
+  });
+  // --- My Groups ---
+
+  router.get('/my-groups', (req, res) => {
+    if (!req.session.lineProfile) {
+      req.session.postLoginRedirect = `${req.app.locals.basePath}/my-groups`;
+      const state = lineAuth.randomState();
+      req.session.oauthState = state;
+      const redirectUri = `${req.protocol}://${req.get('host')}${req.app.locals.basePath}/auth/line/callback`;
+      return res.redirect(lineAuth.buildAuthUrl({ state, redirectUri }));
+    }
+
+    const lineUserId = req.session.lineProfile.userId;
+    const myGroups = db.prepare(
+      `SELECT g.*, m.id as member_id, m.display_name, (g.admin_member_id = m.id) as is_admin
+       FROM members m
+       JOIN groups g ON g.id = m.group_id
+       WHERE m.line_user_id = ?
+       ORDER BY g.created_at DESC`
+    ).all(lineUserId);
+
+    res.render('my-groups', { myGroups, basePath: req.app.locals.basePath });
   });
 
   // --- Create a new group ---
@@ -137,12 +160,22 @@ module.exports = function (router) {
 
     const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Identify current viewer (via session-based identity, see routes/auth.js)
-    const sessionKey = `member_${groupId}`;
-    const currentMemberId = req.session[sessionKey] || null;
-    const currentMember = currentMemberId
-      ? members.find((m) => m.id === currentMemberId)
-      : null;
+    // Identify current viewer. Prefer LINE user ID and fall back to session memberId.
+    let currentMember = null;
+
+    if (req.session.lineProfile) {
+      currentMember = members.find((m) => m.line_user_id === req.session.lineProfile.userId) || null;
+    }
+
+    if (!currentMember) {
+      const sessionKey = `member_${groupId}`;
+      const currentMemberId = req.session[sessionKey] || null;
+      currentMember = currentMemberId ? members.find((m) => m.id === currentMemberId) || null : null;
+    }
+
+    if (currentMember) {
+      req.session[`member_${groupId}`] = currentMember.id;
+    }
 
     const isAdmin = currentMember && group.admin_member_id === currentMember.id;
 

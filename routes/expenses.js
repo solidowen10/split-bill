@@ -17,8 +17,19 @@ module.exports = function (router) {
     if (!group) return res.status(404).send('Group not found');
     if (group.status === 'closed') return res.status(400).send('Group is closed');
 
-    const sessionKey = `member_${groupId}`;
-    const currentMemberId = req.session[sessionKey];
+    let currentMemberId = req.session[`member_${groupId}`];
+
+    if (!currentMemberId && req.session.lineProfile) {
+      const matched = db
+        .prepare('SELECT id FROM members WHERE group_id = ? AND line_user_id = ?')
+        .get(groupId, req.session.lineProfile.userId);
+
+      if (matched) {
+        currentMemberId = matched.id;
+        req.session[`member_${groupId}`] = currentMemberId;
+      }
+    }
+
     if (!currentMemberId) {
       return res.status(403).send('You must claim your name in this group first');
     }

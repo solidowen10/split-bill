@@ -18,8 +18,18 @@ module.exports = function (router) {
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
     if (!group) return res.status(404).send('Group not found');
 
-    const sessionKey = `member_${groupId}`;
-    const currentMemberId = req.session[sessionKey];
+    let currentMemberId = req.session[`member_${groupId}`];
+
+    if (!currentMemberId && req.session.lineProfile) {
+      const matched = db
+        .prepare('SELECT id FROM members WHERE group_id = ? AND line_user_id = ?')
+        .get(groupId, req.session.lineProfile.userId);
+
+      if (matched) {
+        currentMemberId = matched.id;
+        req.session[`member_${groupId}`] = currentMemberId;
+      }
+    }
     if (group.admin_member_id !== currentMemberId) {
       return res.status(403).send('Only the group admin can calculate the split');
     }
@@ -73,9 +83,18 @@ module.exports = function (router) {
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
     if (!group) return res.status(404).send('Group not found');
 
-    const sessionKey = `member_${groupId}`;
-    const currentMemberId = req.session[sessionKey];
+    let currentMemberId = req.session[`member_${groupId}`];
 
+    if (!currentMemberId && req.session.lineProfile) {
+      const matched = db
+        .prepare('SELECT id FROM members WHERE group_id = ? AND line_user_id = ?')
+        .get(groupId, req.session.lineProfile.userId);
+
+      if (matched) {
+        currentMemberId = matched.id;
+        req.session[`member_${groupId}`] = currentMemberId;
+      }
+    }
     const transfer = db
       .prepare(
         `SELECT st.* FROM settlement_transfers st
