@@ -1,0 +1,31 @@
+<% var title = 'My Groups'; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<h1>My Groups</h1>
+<p class="lede">Groups where you&rsquo;ve claimed a name.</p>
+
+<% if (myGroups.length === 0) { %>
+  <div class="card">
+    <div class="empty-state">
+      <p>You haven&rsquo;t joined any groups yet.</p>
+    </div>
+  </div>
+<% } else { %>
+  <% myGroups.forEach(function(g) { %>
+    <a href="<%= basePath %>/g/<%= g.id %>" class="card" style="display:block; text-decoration:none; color:inherit;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 style="margin-bottom:4px;"><%= g.name %></h3>
+          <span class="muted">You're <%= g.display_name %><%= g.is_admin ? ' · Admin' : '' %></span>
+        </div>
+        <span class="status-pill <%= g.status === 'open' ? 'status-open' : 'status-closed' %>">
+          <%= g.status === 'open' ? '● Open' : '■ Closed' %>
+        </span>
+      </div>
+    </a>
+  <% }); %>
+<% } %>
+
+<a href="<%= basePath %>/" class="btn btn-secondary">+ Create a new group</a>
+
+<%- include('partials/foot') %>

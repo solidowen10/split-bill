@@ -245,6 +245,15 @@ module.exports = function (router) {
 
     res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
   });
+  // --- Admin: permanently delete the group ---
+  router.post('/g/:groupId/delete', (req, res) => {
+    const { groupId } = req.params;
+    requireAdmin(req, db, groupId);
+
+    db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
+
+    res.redirect(`${req.app.locals.basePath}/my-groups`);
+  });
 };
 
 function requireAdmin(req, db, groupId) {

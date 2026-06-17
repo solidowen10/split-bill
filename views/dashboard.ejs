@@ -5,7 +5,7 @@
   var cur = group.currency;
   var symbols = { TWD: 'NT$', USD: '$', JPY: '\u00A5', CAD: '$', EUR: '\u20AC' };
   var sym = symbols[cur] || cur + ' ';
-  return sym + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return sym + Math.round(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 } %>
 
 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
@@ -197,6 +197,11 @@
 
   <form method="POST" action="<%= basePath %>/g/<%= group.id %>/reset" onsubmit="return confirm('This deletes all expenses and the calculated split, but keeps everyone\'s name in the group so you can start a new round. Continue?')">
     <button type="submit" class="btn btn-ghost btn-sm">Reset entries for a new round &rarr;</button>
+  </form>
+  <hr class="divider">
+
+  <form method="POST" action="<%= basePath %>/g/<%= group.id %>/delete" onsubmit="return confirm('Permanently delete \'<%= group.name %>\'? This removes all members, expenses, and settlement history. This cannot be undone.')">
+    <button type="submit" class="btn btn-clay btn-sm">Delete this group permanently</button>
   </form>
 </div>
 <% } %>
