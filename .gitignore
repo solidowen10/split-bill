@@ -1,12 +1,9 @@
-node_modules/
 .env
+
+node_modules/
+
 db/*.db
+db/*.db-shm
+db/*.db-wal
 db/*.sqlite
 db/*.sqlite3
-
-*.log
-npm-debug.log*
-
-.DS_Store
-
-pm2.log
