@@ -1,0 +1,27 @@
+<% var title = 'Join ' + group.name; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<h1>Welcome, <%= lineProfile.displayName %>.</h1>
+<p class="lede">You&rsquo;re joining <strong><%= group.name %></strong>. Tap your name below &mdash; we&rsquo;ll attach your LINE profile to it so everyone knows it&rsquo;s you.</p>
+
+<div class="card">
+  <% var unclaimed = members.filter(function(m){ return !m.line_user_id; }); %>
+  <% if (unclaimed.length === 0) { %>
+    <div class="empty-state">
+      <p>Everyone&rsquo;s name has already been claimed. If you don&rsquo;t see yourself, ask the group admin to add you.</p>
+    </div>
+  <% } else { %>
+    <% unclaimed.forEach(function(m) { %>
+      <form method="POST" action="<%= basePath %>/g/<%= group.id %>/claim" style="margin-bottom:10px;">
+        <input type="hidden" name="memberId" value="<%= m.id %>">
+        <button type="submit" class="btn btn-secondary" style="justify-content:flex-start; padding-left:16px;">
+          <%= m.display_name %>
+        </button>
+      </form>
+    <% }); %>
+  <% } %>
+</div>
+
+<p class="muted center">Not on the list? Ask whoever created the group to add your name first.</p>
+
+<%- include('partials/foot') %>

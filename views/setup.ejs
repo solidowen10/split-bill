@@ -1,0 +1,45 @@
+<% var title = group.name + ' \u2014 Setup'; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<h1><%= group.name %></h1>
+<p class="lede">Add everyone who&rsquo;s splitting this bill. Use placeholder names for now &mdash; each person will claim their own name when they sign in with LINE.</p>
+
+<div class="card">
+  <div class="section-label">Members (<%= members.length %>)</div>
+
+  <% if (members.length === 0) { %>
+    <div class="empty-state">
+      <div class="glyph">&#9776;</div>
+      <p>No one added yet. Start with yourself.</p>
+    </div>
+  <% } else { %>
+    <% members.forEach(function(m) { %>
+      <div class="member-row">
+        <div class="avatar"><%= m.display_name.charAt(0).toUpperCase() %></div>
+        <div class="member-name"><%= m.display_name %></div>
+        <form method="POST" action="<%= basePath %>/g/<%= group.id %>/members/<%= m.id %>/delete" style="margin:0;">
+          <button type="submit" class="btn btn-ghost btn-sm">Remove</button>
+        </form>
+      </div>
+    <% }); %>
+  <% } %>
+</div>
+
+<div class="card">
+  <form method="POST" action="<%= basePath %>/g/<%= group.id %>/members">
+    <label for="displayName">Add a name</label>
+    <input type="text" id="displayName" name="displayName" placeholder="e.g. Owen, Taku, Clayton" required maxlength="40" autofocus>
+    <button type="submit" class="btn btn-secondary">Add member</button>
+  </form>
+</div>
+
+<form method="POST" action="<%= basePath %>/g/<%= group.id %>/setup/finish">
+  <button type="submit" class="btn btn-primary" <%= members.length < 2 ? 'disabled title="Add at least 2 people"' : '' %>>
+    Done &mdash; get invite link
+  </button>
+</form>
+<% if (members.length < 2) { %>
+  <p class="muted center" style="margin-top:10px;">Add at least 2 people to continue.</p>
+<% } %>
+
+<%- include('partials/foot') %>

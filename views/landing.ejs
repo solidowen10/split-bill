@@ -1,0 +1,27 @@
+<% var basePath = locals.basePath || ''; var title = 'Shared Ledger \u2014 split bills with friends'; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<h1>Split bills without the spreadsheet.</h1>
+<p class="lede">Start a group, add who&rsquo;s in, and let everyone log what they spent. We&rsquo;ll work out who owes who &mdash; in as few payments as possible.</p>
+
+<div class="card">
+  <form method="POST" action="<%= basePath %>/groups">
+    <label for="groupName">Group name</label>
+    <input type="text" id="groupName" name="groupName" placeholder="e.g. Taipei Trip, Apartment 4B" required maxlength="80">
+
+    <label for="currency">Currency</label>
+    <select id="currency" name="currency">
+      <option value="TWD" selected>TWD &mdash; NT$</option>
+      <option value="USD">USD &mdash; $</option>
+      <option value="JPY">JPY &mdash; &yen;</option>
+      <option value="CAD">CAD &mdash; $</option>
+      <option value="EUR">EUR &mdash; &euro;</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Create group</button>
+  </form>
+</div>
+
+<p class="muted center">No app to install. Friends join by tapping a link and signing in with LINE.</p>
+
+<%- include('partials/foot') %>

@@ -1,0 +1,210 @@
+<% var title = group.name; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<% function fmt(n) {
+  var cur = group.currency;
+  var symbols = { TWD: 'NT$', USD: '$', JPY: '\u00A5', CAD: '$', EUR: '\u20AC' };
+  var sym = symbols[cur] || cur + ' ';
+  return sym + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+} %>
+
+<div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+  <div>
+    <h1><%= group.name %></h1>
+    <span class="status-pill <%= group.status === 'open' ? 'status-open' : 'status-closed' %>">
+      <%= group.status === 'open' ? '\u25CF Open' : '\u25A0 Closed' %>
+    </span>
+  </div>
+</div>
+
+<% if (!currentMember) { %>
+  <div class="card">
+    <p style="margin-bottom:0;">You&rsquo;re viewing this group without claiming a name. <a href="<%= basePath %>/g/<%= group.id %>/join">Join with LINE</a> to add expenses or mark payments.</p>
+  </div>
+<% } %>
+
+<!-- Members -->
+<div class="card">
+  <div class="section-label">Members</div>
+  <% members.forEach(function(m) { %>
+    <div class="member-row">
+      <div class="avatar">
+        <% if (m.line_picture_url) { %><img src="<%= m.line_picture_url %>" alt="">
+        <% } else { %><%= m.display_name.charAt(0).toUpperCase() %><% } %>
+      </div>
+      <div class="member-name">
+        <%= m.display_name %>
+        <% if (group.admin_member_id === m.id) { %><span class="badge badge-admin">Admin</span><% } %>
+      </div>
+      <% if (m.line_user_id) { %>
+        <span class="badge badge-joined">Joined</span>
+      <% } else { %>
+        <span class="badge badge-pending">Pending</span>
+      <% } %>
+    </div>
+  <% }); %>
+
+  <% if (!allClaimed) { %>
+    <p class="muted" style="margin-top:14px; margin-bottom:0;">
+      Some people haven&rsquo;t joined yet. Share the <a href="<%= basePath %>/g/<%= group.id %>/invite">invite link</a> with them.
+    </p>
+  <% } %>
+</div>
+
+<!-- Add expense -->
+<% if (group.status === 'open' && currentMember) { %>
+<div class="card">
+  <div class="section-label">Add an expense</div>
+  <form method="POST" action="<%= basePath %>/g/<%= group.id %>/expenses" id="expenseForm">
+    <label for="description">What was it for?</label>
+    <input type="text" id="description" name="description" placeholder="e.g. Dinner, gas, hotel" required maxlength="120">
+
+    <div class="field-row">
+      <div>
+        <label for="amount">Amount</label>
+        <input type="number" id="amount" name="amount" placeholder="0.00" step="0.01" min="0.01" required>
+      </div>
+      <div>
+        <label for="paidBy">Paid by</label>
+        <select id="paidBy" name="paidBy" required>
+          <% members.forEach(function(m) { %>
+            <option value="<%= m.id %>" <%= currentMember && currentMember.id === m.id ? 'selected' : '' %>><%= m.display_name %></option>
+          <% }); %>
+        </select>
+      </div>
+    </div>
+
+    <label>Who&rsquo;s splitting this?</label>
+    <div class="field-row" style="margin-bottom:14px;">
+      <label style="display:flex; align-items:center; gap:6px; font-weight:500; font-size:14px; color: var(--ink);">
+        <input type="radio" name="splitMode" value="all" checked onchange="toggleCustomSplit(false)" style="width:auto; margin:0;"> Everyone
+      </label>
+      <label style="display:flex; align-items:center; gap:6px; font-weight:500; font-size:14px; color: var(--ink);">
+        <input type="radio" name="splitMode" value="custom" onchange="toggleCustomSplit(true)" style="width:auto; margin:0;"> Just some people
+      </label>
+    </div>
+
+    <div id="customSplitBox" style="display:none; margin-bottom:16px;">
+      <% members.forEach(function(m) { %>
+        <div class="checkbox-row">
+          <input type="checkbox" name="participantIds" value="<%= m.id %>" id="p_<%= m.id %>">
+          <label for="p_<%= m.id %>" style="margin:0; font-weight:500; color: var(--ink);"><%= m.display_name %></label>
+        </div>
+      <% }); %>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Add expense</button>
+  </form>
+</div>
+<% } %>
+
+<!-- Expense ledger -->
+<div class="card">
+  <div class="section-label">Expenses (<%= expenses.length %>)</div>
+
+  <% if (expenses.length === 0) { %>
+    <div class="empty-state">
+      <div class="glyph">&#128221;</div>
+      <p>No expenses logged yet.</p>
+    </div>
+  <% } else { %>
+    <div class="ledger">
+      <% expenses.forEach(function(e) { %>
+        <div class="ledger-item">
+          <div>
+            <div class="desc"><%= e.description %></div>
+            <div class="meta">
+              Paid by <%= e.payer_name %>
+              <% if (e.split_mode === 'custom') { %> &middot; split <%= e.participantIds.length %> ways<% } %>
+            </div>
+          </div>
+          <div style="text-align:right;">
+            <div class="amt"><%= fmt(e.amount) %></div>
+            <% if (group.status === 'open' && currentMember && (currentMember.id === e.created_by_member_id || currentMember.id === e.paid_by_member_id || isAdmin)) { %>
+              <form method="POST" action="<%= basePath %>/g/<%= group.id %>/expenses/<%= e.id %>/delete" style="margin-top:4px;">
+                <button type="submit" class="btn btn-ghost btn-sm" style="padding:2px 0;" onclick="return confirm('Remove this expense?')">Remove</button>
+              </form>
+            <% } %>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+    <div class="ledger-total">
+      <span>Total</span>
+      <span><%= fmt(totalSpent) %></span>
+    </div>
+  <% } %>
+</div>
+
+<!-- Settlement -->
+<% if (latestSettlement) { %>
+<div class="card">
+  <div class="section-label">Who pays who</div>
+  <% if (transfers.length === 0) { %>
+    <div class="empty-state">
+      <div class="glyph">&#10003;</div>
+      <p>Everyone&rsquo;s even. No payments needed.</p>
+    </div>
+  <% } else { %>
+    <% transfers.forEach(function(t) { %>
+      <div class="transfer <%= t.is_paid ? 'paid' : '' %>">
+        <div class="who">
+          <strong><%= t.from_name %></strong> <span class="arrow">&rarr; pays &rarr;</span> <strong><%= t.to_name %></strong>
+        </div>
+        <div class="amt"><%= fmt(t.amount) %></div>
+        <% if (currentMember && (currentMember.id === t.from_member_id || currentMember.id === t.to_member_id || isAdmin)) { %>
+          <form method="POST" action="<%= basePath %>/g/<%= group.id %>/transfers/<%= t.id %>/toggle-paid">
+            <button type="submit" class="btn btn-sm <%= t.is_paid ? 'btn-secondary' : 'btn-clay' %>">
+              <%= t.is_paid ? 'Undo' : 'Mark paid' %>
+            </button>
+          </form>
+        <% } %>
+      </div>
+    <% }); %>
+  <% } %>
+  <p class="muted" style="margin-top:10px; margin-bottom:0;">
+    Calculated <%= new Date(latestSettlement.created_at).toLocaleString() %>.
+    <% if (group.status === 'open') { %>Added a new expense since? Recalculate below.<% } %>
+  </p>
+</div>
+<% } %>
+
+<!-- Admin controls -->
+<% if (isAdmin) { %>
+<div class="card">
+  <div class="section-label">Admin</div>
+
+  <% if (group.status === 'open') { %>
+    <form method="POST" action="<%= basePath %>/g/<%= group.id %>/calculate" style="margin-bottom:10px;">
+      <button type="submit" class="btn btn-primary" <%= expenses.length === 0 ? 'disabled' : '' %>>
+        <%= latestSettlement ? 'Recalculate split' : 'Calculate split' %>
+      </button>
+    </form>
+  <% } %>
+
+  <div class="btn-block-row" style="margin-bottom:10px;">
+    <a href="<%= basePath %>/g/<%= group.id %>/invite" class="btn btn-secondary">Invite link</a>
+    <% if (group.status === 'open') { %>
+      <form method="POST" action="<%= basePath %>/g/<%= group.id %>/close" style="flex:1; margin:0;">
+        <button type="submit" class="btn btn-secondary" style="width:100%;" onclick="return confirm('Close this group? No more expenses can be added until reopened.')">Close group</button>
+      </form>
+    <% } else { %>
+      <form method="POST" action="<%= basePath %>/g/<%= group.id %>/reopen" style="flex:1; margin:0;">
+        <button type="submit" class="btn btn-secondary" style="width:100%;">Reopen group</button>
+      </form>
+    <% } %>
+  </div>
+
+  <form method="POST" action="<%= basePath %>/g/<%= group.id %>/reset" onsubmit="return confirm('This deletes all expenses and the calculated split, but keeps everyone\'s name in the group so you can start a new round. Continue?')">
+    <button type="submit" class="btn btn-ghost btn-sm">Reset entries for a new round &rarr;</button>
+  </form>
+</div>
+<% } %>
+
+<script>
+function toggleCustomSplit(show) {
+  document.getElementById('customSplitBox').style.display = show ? 'block' : 'none';
+}
+</script>
+
+<%- include('partials/foot') %>

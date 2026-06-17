@@ -1,0 +1,39 @@
+<% var title = group.name + ' \u2014 Invite'; %>
+<%- include('partials/head', { basePath, title }) %>
+
+<h1>You&rsquo;re all set.</h1>
+<p class="lede">Send this link to everyone in <strong><%= group.name %></strong>. When they open it, they&rsquo;ll sign in with LINE and pick which name is theirs.</p>
+
+<div class="card">
+  <div class="section-label">Invite link</div>
+  <div class="copy-box" id="inviteUrl"><%= inviteUrl %></div>
+  <button type="button" class="btn btn-primary" onclick="copyLink()">Copy link</button>
+</div>
+
+<div class="card">
+  <div class="section-label">Waiting to join</div>
+  <% members.forEach(function(m) { %>
+    <div class="member-row">
+      <div class="avatar"><%= m.display_name.charAt(0).toUpperCase() %></div>
+      <div class="member-name"><%= m.display_name %></div>
+      <span class="badge badge-pending">Not joined</span>
+    </div>
+  <% }); %>
+</div>
+
+<a href="<%= basePath %>/g/<%= group.id %>" class="btn btn-secondary">Go to group page</a>
+
+<div class="toast" id="toast">Link copied</div>
+
+<script>
+function copyLink() {
+  const text = document.getElementById('inviteUrl').textContent.trim();
+  navigator.clipboard.writeText(text).then(function() {
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 1800);
+  });
+}
+</script>
+
+<%- include('partials/foot') %>
