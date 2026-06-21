@@ -131,7 +131,7 @@ p { line-height: 1.55; color: var(--ink-soft); margin: 0 0 16px; }
 /* --- Form elements --- */
 label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink-soft);
   margin-bottom: 6px;
@@ -141,7 +141,7 @@ input[type="number"],
 select {
   width: 100%;
   font-family: var(--font-body);
-  font-size: 15px;
+  font-size: 16px;
   padding: 11px 13px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;

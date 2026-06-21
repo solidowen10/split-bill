@@ -113,9 +113,11 @@ module.exports = function (router) {
     res.redirect(`${req.app.locals.basePath}/g/${groupId}/setup`);
   });
 
-  // Finish setup -> generates the invite link page
+  // Finish setup -> send admin through LINE join/claim flow
   router.post('/g/:groupId/setup/finish', (req, res) => {
-    res.redirect(`${req.app.locals.basePath}/g/${req.params.groupId}/invite`);
+    const { groupId } = req.params;
+    req.session.postLoginRedirect = req.app.locals.basePath + '/g/' + groupId + '/join';
+    res.redirect(req.app.locals.basePath + '/g/' + groupId + '/join');
   });
 
   router.get('/g/:groupId/invite', (req, res) => {
