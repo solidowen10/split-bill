@@ -324,3 +324,94 @@ input:focus, select:focus {
   .field-row { flex-direction: column; gap: 0; }
   .btn-block-row { flex-direction: column; }
 }
+
+/* --- lürú tools shared layout standard --- */
+.wrap {
+  width: min(100%, 920px) !important;
+  max-width: 920px !important;
+  margin: 0 auto !important;
+  padding: 16px 20px 80px !important;
+}
+
+@media (max-width: 760px) {
+  .wrap {
+    max-width: 760px !important;
+    padding: 16px 16px 80px !important;
+  }
+}
+
+.brand {
+  margin-bottom: 16px !important;
+}
+
+.brand img {
+  height: 36px !important;
+}
+
+.brand .mark {
+  font-size: 20px !important;
+}
+
+/* FINAL: shared sticky header */
+.brand {
+  position: sticky;
+  top: 0;
+  z-index: 80;
+  background: var(--cream);
+  padding-top: 12px;
+  padding-bottom: 10px;
+}
+
+/* Shared Ledger header actions */
+.brand {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px !important;
+}
+
+.brand-main {
+  text-decoration: none !important;
+  color: inherit !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.brand-main img {
+  height: 28px !important;
+  width: auto !important;
+}
+
+.brand-logout {
+  font-size: 13px !important;
+  color: var(--ink-soft) !important;
+  text-decoration: none !important;
+}
+
+.brand-logout:hover {
+  color: var(--moss) !important;
+  text-decoration: underline !important;
+}
+
+/* Final logout button style */
+.brand-logout {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 7px 12px !important;
+  border: 1px solid var(--line-strong) !important;
+  border-radius: 999px !important;
+  background: var(--white) !important;
+  color: var(--ink-soft) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  text-decoration: none !important;
+  line-height: 1 !important;
+}
+
+.brand-logout:hover {
+  background: var(--sage) !important;
+  color: var(--moss) !important;
+  text-decoration: none !important;
+}

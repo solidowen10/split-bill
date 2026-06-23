@@ -1,11 +1,9 @@
 // routes/groups.js
 const { nanoid } = require('nanoid');
 const db = getDb();
-const lineAuth = require('../lib/line-auth');
+const { requireLineSSO } = require('../lib/sso');
 
 function getDb() {
-  // Use sandbox driver only when explicitly testing locally without
-  // better-sqlite3 compiled. Production always uses db/index.js.
   if (process.env.USE_SANDBOX_DB === '1') {
     return require('../db/index.sandbox');
   }
@@ -13,26 +11,18 @@ function getDb() {
 }
 
 function genJoinCode() {
-  // Short, human-typeable code (e.g. for manual entry as backup to the link)
   return nanoid(8).toUpperCase().replace(/[-_]/g, 'X');
 }
 
 module.exports = function (router) {
-  // --- Landing page ---
   router.get('/', (req, res) => {
     res.render('landing');
   });
-  // --- My Groups ---
 
-  router.get('/my-groups', (req, res) => {
-    if (!req.session.lineProfile) {
-      req.session.postLoginRedirect = `${req.app.locals.basePath}/my-groups`;
-      const state = lineAuth.randomState();
-      req.session.oauthState = state;
-      const redirectUri = `${req.protocol}://${req.get('host')}${req.app.locals.basePath}/auth/line/callback`;
-      return res.redirect(lineAuth.buildAuthUrl({ state, redirectUri }));
-    }
-
+  // /my-groups used to kick off LINE OAuth directly. Now it just uses the
+  // shared SSO middleware — if not logged in, the visitor is sent to
+  // /auth/login and bounced back here.
+  router.get('/my-groups', requireLineSSO, (req, res) => {
     const lineUserId = req.session.lineProfile.userId;
     const myGroups = db.prepare(
       `SELECT g.*, m.id as member_id, m.display_name, (g.admin_member_id = m.id) as is_admin
@@ -45,7 +35,6 @@ module.exports = function (router) {
     res.render('my-groups', { myGroups, basePath: req.app.locals.basePath });
   });
 
-  // --- Create a new group ---
   router.post('/groups', (req, res) => {
     const { groupName, currency } = req.body;
     if (!groupName || !groupName.trim()) {
@@ -61,13 +50,11 @@ module.exports = function (router) {
        VALUES (?, ?, ?, 'open', ?, ?)`
     ).run(groupId, groupName.trim(), joinCode, currency || 'TWD', now);
 
-    // Store "creator" in session so they can claim the admin slot during setup
     req.session.pendingAdminGroupId = groupId;
 
     res.redirect(`${req.app.locals.basePath}/g/${groupId}/setup`);
   });
 
-  // --- Admin setup: add placeholder member names ---
   router.get('/g/:groupId/setup', (req, res) => {
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(req.params.groupId);
     if (!group) return res.status(404).send('Group not found');
@@ -113,10 +100,10 @@ module.exports = function (router) {
     res.redirect(`${req.app.locals.basePath}/g/${groupId}/setup`);
   });
 
-  // Finish setup -> send admin through LINE join/claim flow
   router.post('/g/:groupId/setup/finish', (req, res) => {
     const { groupId } = req.params;
-    req.session.postLoginRedirect = req.app.locals.basePath + '/g/' + groupId + '/join';
+    // After setup, send the creator to claim their name (via join page,
+    // which will check SSO and prompt for name claim)
     res.redirect(req.app.locals.basePath + '/g/' + groupId + '/join');
   });
 
@@ -132,7 +119,6 @@ module.exports = function (router) {
     res.render('invite', { group, members, inviteUrl, basePath: req.app.locals.basePath });
   });
 
-  // --- Main group dashboard ---
   router.get('/g/:groupId', (req, res) => {
     const { groupId } = req.params;
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
@@ -152,7 +138,6 @@ module.exports = function (router) {
       )
       .all(groupId);
 
-    // Attach participant lists to each expense
     for (const exp of expenses) {
       exp.participantIds = db
         .prepare('SELECT member_id FROM expense_participants WHERE expense_id = ?')
@@ -162,7 +147,6 @@ module.exports = function (router) {
 
     const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-    // Identify current viewer. Prefer LINE user ID and fall back to session memberId.
     let currentMember = null;
 
     if (req.session.lineProfile) {
@@ -181,7 +165,6 @@ module.exports = function (router) {
 
     const isAdmin = currentMember && group.admin_member_id === currentMember.id;
 
-    // Latest settlement, if any
     const latestSettlement = db
       .prepare('SELECT * FROM settlements WHERE group_id = ? ORDER BY created_at DESC LIMIT 1')
       .get(groupId);
@@ -217,18 +200,15 @@ module.exports = function (router) {
     });
   });
 
-  // --- Admin: close group ---
   router.post('/g/:groupId/close', (req, res) => {
     const { groupId } = req.params;
     requireAdmin(req, db, groupId);
     db.prepare(`UPDATE groups SET status = 'closed', closed_at = ? WHERE id = ?`).run(
-      Date.now(),
-      groupId
+      Date.now(), groupId
     );
     res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
   });
 
-  // --- Admin: reopen group ---
   router.post('/g/:groupId/reopen', (req, res) => {
     const { groupId } = req.params;
     requireAdmin(req, db, groupId);
@@ -236,24 +216,18 @@ module.exports = function (router) {
     res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
   });
 
-  // --- Admin: reset entries (keep members, wipe expenses/settlements) ---
   router.post('/g/:groupId/reset', (req, res) => {
     const { groupId } = req.params;
     requireAdmin(req, db, groupId);
-
     db.prepare('DELETE FROM expenses WHERE group_id = ?').run(groupId);
     db.prepare('DELETE FROM settlements WHERE group_id = ?').run(groupId);
-    // expense_participants and settlement_transfers cascade-delete via FK
-
     res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
   });
-  // --- Admin: permanently delete the group ---
+
   router.post('/g/:groupId/delete', (req, res) => {
     const { groupId } = req.params;
     requireAdmin(req, db, groupId);
-
     db.prepare('DELETE FROM groups WHERE id = ?').run(groupId);
-
     res.redirect(`${req.app.locals.basePath}/my-groups`);
   });
 };

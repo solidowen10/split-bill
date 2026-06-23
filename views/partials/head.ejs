@@ -3,16 +3,30 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= typeof title !== 'undefined' ? title : 'Shared Ledger' %></title>
+  <title>lürú | Shared Ledger</title>
   <link rel="stylesheet" href="<%= basePath %>/static/css/style.css">
   <link rel="icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
   <link rel="apple-touch-icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
 </head>
 <body>
 <div class="wrap">
-  <div class="brand">
+  <div class="brand" style="display:flex; align-items:center; justify-content:space-between;">
   <a href="<%= basePath %>/my-groups" style="text-decoration:none; color:inherit; display:flex; align-items:center; gap:10px;">
-    <img src="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png" alt="lürú tools" style="height:28px; width:auto;">
+    <img src="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png" alt="Selinna Owen Tools" style="height:28px; width:auto;">
     <span class="mark">Shared <em>Ledger</em></span>
   </a>
+
+  <details class="menu">
+    <summary style="list-style:none; cursor:pointer; font-size:24px; line-height:1;">☰</summary>
+    <div style="position:absolute; right:20px; margin-top:10px; background:white; border:1px solid var(--line); border-radius:10px; box-shadow:var(--shadow-card); padding:10px; min-width:180px; z-index:10;">
+      <a href="<%= basePath %>/my-groups" style="display:block; padding:10px; color:inherit;">My Groups</a>
+      <a href="<%= basePath %>/" style="display:block; padding:10px; color:inherit;">Create Group</a>
+      <a href="https://tool.selinnaowen.com/" style="display:block; padding:10px; color:inherit;">All Tools</a>
+      <hr style="border:0; border-top:1px solid var(--line); margin:8px 0;">
+
+      <a href="<%= basePath %>/logout" style="display:block; padding:10px; color:inherit;">
+        Log out
+      </a>
+    </div>
+  </details>
 </div>
