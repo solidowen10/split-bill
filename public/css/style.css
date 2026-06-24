@@ -358,8 +358,8 @@ input:focus, select:focus {
   top: 0;
   z-index: 80;
   background: var(--cream);
-  padding-top: 12px;
-  padding-bottom: 10px;
+  padding-top: 24px;
+  padding-bottom: 16px;
 }
 
 /* Shared Ledger header actions */

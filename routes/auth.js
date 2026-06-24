@@ -1,5 +1,17 @@
-// routes/auth.js
-const lineAuth = require('../lib/line-auth');
+// routes/auth.js  — SSO version
+//
+// LINE login is now handled entirely by the shared luru auth service at
+// /auth/login. This file only deals with:
+//   • /g/:groupId/join  — claiming a member slot after SSO login
+//   • /g/:groupId/claim — writing the claim to the DB
+//   • /auth/logout      — destroying the local session (the shared cookie
+//                         is cleared by the spending tracker's own sign-out)
+//
+// The old /auth/line/callback route is GONE — no LINE OAuth happens here.
+// The LINE Login Channel callback URL for split-bill is no longer needed
+// (leave it in LINE Developers Console for now; it's harmless).
+
+const { requireLineSSO } = require('../lib/sso');
 
 function getDb() {
   if (process.env.USE_SANDBOX_DB === '1') {
@@ -11,28 +23,22 @@ function getDb() {
 module.exports = function (router) {
   const db = getDb();
 
-  // --- Join page: entry point from the invite link ---
-  router.get('/g/:groupId/join', (req, res) => {
+  // ── Join page ─────────────────────────────────────────────────────────────
+  // requireLineSSO runs first. If the visitor isn't logged in, they get
+  // sent to /auth/login with ?next= pointing back here.
+  // Once they log in, the auth service redirects them back and the
+  // middleware populates req.session.lineProfile, so all existing code
+  // that reads lineProfile continues to work unchanged.
+  router.get('/g/:groupId/join', requireLineSSO, (req, res) => {
     const { groupId } = req.params;
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
     if (!group) return res.status(404).send('Group not found');
 
     const sessionKey = `member_${groupId}`;
     if (req.session[sessionKey]) {
-      // Already claimed a name in this group -> go straight to dashboard
       return res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
     }
 
-    if (!req.session.lineProfile) {
-      // Not logged in via LINE yet -> kick off OAuth, remembering where to return
-      const state = lineAuth.randomState();
-      req.session.oauthState = state;
-      req.session.postLoginRedirect = `${req.app.locals.basePath}/g/${groupId}/join`;
-      const redirectUri = `${req.protocol}://${req.get('host')}${req.app.locals.basePath}/auth/line/callback`;
-      return res.redirect(lineAuth.buildAuthUrl({ state, redirectUri }));
-    }
-
-    // Logged in via LINE, but haven't claimed a member slot in this group yet
     if (group.status === 'closed') {
       return res.status(400).send('This group is closed.');
     }
@@ -49,17 +55,13 @@ module.exports = function (router) {
     });
   });
 
-  // --- Claim a member slot as the logged-in LINE user ---
-  router.post('/g/:groupId/claim', (req, res) => {
+  // ── Claim a member slot ────────────────────────────────────────────────────
+  router.post('/g/:groupId/claim', requireLineSSO, (req, res) => {
     const { groupId } = req.params;
     const { memberId } = req.body;
     const group = db.prepare('SELECT * FROM groups WHERE id = ?').get(groupId);
     if (!group) return res.status(404).send('Group not found');
     if (group.status === 'closed') return res.status(400).send('Group is closed');
-
-    if (!req.session.lineProfile) {
-      return res.redirect(`${req.app.locals.basePath}/g/${groupId}/join`);
-    }
 
     const member = db
       .prepare('SELECT * FROM members WHERE id = ? AND group_id = ?')
@@ -69,7 +71,6 @@ module.exports = function (router) {
 
     const { userId, displayName, pictureUrl } = req.session.lineProfile;
 
-    // Prevent the same LINE account from claiming two slots in one group
     const existingClaim = db
       .prepare('SELECT * FROM members WHERE group_id = ? AND line_user_id = ?')
       .get(groupId, userId);
@@ -83,7 +84,6 @@ module.exports = function (router) {
        WHERE id = ?`
     ).run(userId, displayName, pictureUrl || null, Date.now(), memberId);
 
-    // First person to ever claim becomes admin if no admin set yet
     if (!group.admin_member_id) {
       db.prepare('UPDATE groups SET admin_member_id = ? WHERE id = ?').run(memberId, groupId);
     }
@@ -92,40 +92,23 @@ module.exports = function (router) {
     res.redirect(`${req.app.locals.basePath}/g/${groupId}`);
   });
 
-  // --- LINE OAuth callback ---
-  router.get('/auth/line/callback', async (req, res) => {
-    const { code, state, error } = req.query;
-
-    if (error) {
-      return res.status(400).send(`LINE login failed: ${error}`);
-    }
-    if (!state || state !== req.session.oauthState) {
-      return res.status(400).send('Invalid login state. Please try again.');
-    }
-
-    try {
-      const redirectUri = `${req.protocol}://${req.get('host')}${req.app.locals.basePath}/auth/line/callback`;
-      const tokenData = await lineAuth.exchangeCodeForToken({ code, redirectUri });
-      const profile = await lineAuth.getProfile(tokenData.access_token);
-
-      req.session.lineProfile = {
-        userId: profile.userId,
-        displayName: profile.displayName,
-        pictureUrl: profile.pictureUrl,
-      };
-      delete req.session.oauthState;
-
-      const redirectTo = req.session.postLoginRedirect || req.app.locals.basePath + '/';
-      delete req.session.postLoginRedirect;
-      res.redirect(redirectTo);
-    } catch (err) {
-      console.error('LINE OAuth error:', err.response?.data || err.message);
-      res.status(500).send('Login failed. Please try again.');
-    }
+  // ── My-groups login gate ───────────────────────────────────────────────────
+  // The original groups.js redirected to LINE OAuth for /my-groups. Since
+  // we no longer run OAuth ourselves, we just use the SSO middleware instead.
+  // This route isn't strictly needed (groups.js still handles /my-groups) but
+  // we expose a named route here so it can be added to the router in groups.js
+  // without importing sso.js there.
+  router.get('/login', (req, res) => {
+    // Direct hit on /split-bill/login -> send to the real login page
+    const next = req.query.next || req.app.locals.basePath + '/my-groups';
+    const authBase = process.env.AUTH_SERVICE_BASE || '/auth';
+    res.redirect(`${authBase}/login?next=${encodeURIComponent(next)}`);
   });
 
-  // --- Logout (clears LINE session profile, not group membership) ---
+  // ── Logout ─────────────────────────────────────────────────────────────────
   router.post('/auth/logout', (req, res) => {
+    // Destroy the local Express session. The shared auth cookie is managed
+    // by /auth/logout.
     req.session.destroy(() => {
       res.redirect(req.app.locals.basePath + '/');
     });
