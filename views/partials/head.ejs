@@ -6,13 +6,11 @@
   <title>lürú | <%= typeof title !== 'undefined' ? title : 'Shared Ledger' %></title>
   <link rel="icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
   <link rel="apple-touch-icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Fredoka:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<%= basePath %>/static/css/style.css">
   <style>
     /* ── Shared shell styles (header / footer / menu) ── */
     :root {
+      --font-seasons: "The Seasons", "The Seasons Regular", "The Seasons Light", Georgia, serif;
       --shell-accent: #7C6FAB; /* soft violet for Shared Ledger */
     }
 
@@ -43,7 +41,7 @@
     }
 
     .luru-app-name {
-      font-family: 'Fraunces', Georgia, serif;
+      font-family: var(--font-seasons);
       font-size: clamp(28px, 3.1vw, 40px);
       font-weight: 650;
       color: #171B20;
@@ -115,7 +113,7 @@
     }
 
     .luru-menu-section-label {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-seasons);
       font-size: 10px;
       font-weight: 700;
       letter-spacing: 0.08em;
@@ -132,7 +130,7 @@
       border-radius: 8px;
       text-decoration: none;
       color: #333;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-seasons);
       font-size: 14px;
       font-weight: 500;
       transition: background 0.12s;
@@ -174,14 +172,14 @@
     }
 
     .luru-footer-tagline {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: var(--font-seasons);
       font-size: 13px;
       color: #aaa;
       margin: 0 0 8px;
     }
 
     .luru-footer-link {
-      font-family: 'Fredoka', sans-serif;
+      font-family: var(--font-seasons);
       font-size: 14px;
       font-weight: 500;
       color: var(--shell-accent);
