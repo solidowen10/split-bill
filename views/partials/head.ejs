@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>lürúee tools | <%= typeof title !== 'undefined' ? title : 'Shared Ledger' %></title>
-  <link rel="icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
-  <link rel="apple-touch-icon" href="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png">
+  <link rel="icon" href="https://tool.luruee.com/logo-20260824-v2.png">
+  <link rel="apple-touch-icon" href="https://tool.luruee.com/logo-20260824-v2.png">
   <link rel="stylesheet" href="<%= basePath %>/static/css/style.css">
   <style>
     /* ── Shared shell styles (header / footer / menu) ── */
@@ -190,13 +190,33 @@
     .luru-footer-link:hover {
       text-decoration: underline;
     }
+
+    .luru-footer-links {
+      display: inline-flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 8px;
+    }
+
+    .luru-footer-links a {
+      color: var(--shell-accent);
+      font-family: var(--font-seasons);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .luru-footer-links a:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
 
 <header class="luru-header">
   <a href="<%= basePath %>/my-groups" class="luru-brand">
-    <img src="https://www.selinnaowen.com/wp-content/uploads/2026/06/tools-logo-1.png" alt="lürúee tools">
+    <img src="https://tool.luruee.com/logo-20260824-v2.png" alt="lürúee tools">
     <span class="luru-app-name">Shared <em>Ledger</em></span>
   </a>
 
